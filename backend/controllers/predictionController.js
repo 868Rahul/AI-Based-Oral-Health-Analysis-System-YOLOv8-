@@ -216,13 +216,13 @@ const getStats = async (req, res) => {
 
     const [total, detected, noDisease] = await Promise.all([
       Prediction.countDocuments({ userId }),
-      Prediction.countDocuments({ userId, status: { $in: ["lesion_detected", "disease_detected"] } }),
+      Prediction.countDocuments({ userId, status: { $nin: ["no_lesion", "no_disease", "error"] } }),
       Prediction.countDocuments({ userId, status: { $in: ["no_lesion", "no_disease"] } }),
     ]);
 
     // Average confidence over detected lesions
     const avgResult = await Prediction.aggregate([
-      { $match: { userId: userId, status: { $in: ["lesion_detected", "disease_detected"] } } },
+      { $match: { userId: userId, status: { $nin: ["no_lesion", "no_disease", "error"] } } },
       { $group: { _id: null, avgConf: { $avg: "$topConfidence" } } },
     ]);
     const avgConfidence =

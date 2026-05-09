@@ -2,6 +2,7 @@
 backend/node_modules/
 backend/uploads/
 backend/.env
+backend/.env.example
 
 # ── Flask AI API ─────────────────────────────────────────
 flask_api/__pycache__/
@@ -11,11 +12,14 @@ flask_api/annotated/
 flask_api/.env
 flask_api/venv/
 flask_api/env/
+flask_api/.env.example
+flask_api/oral-health-ai/
 
 # ── React frontend ────────────────────────────────────────
 frontend/node_modules/
 frontend/build/
 frontend/.env
+frontend/.env.example
 
 # ── General ───────────────────────────────────────────────
 .DS_Store

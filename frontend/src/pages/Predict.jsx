@@ -45,7 +45,7 @@ export default function Predict() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(data.prediction);
-      const isFound = data.prediction.status === "disease_detected" || data.prediction.status === "lesion_detected";
+      const isFound = data.prediction.status && (data.prediction.status.endsWith("_detected") || ["disease_detected", "lesion_detected"].includes(data.prediction.status));
       toast.success(isFound
         ? `⚠️ ${data.prediction.detectionCount || data.prediction.lesionCount} issue(s) detected!`
         : "✅ No issues detected.");
@@ -76,7 +76,7 @@ export default function Predict() {
 
   const handleReset = () => { setFile(null); setPreview(null); setResult(null); };
 
-  const isDetected = result?.status === "disease_detected" || result?.status === "lesion_detected";
+  const isDetected = result?.status && (result.status.endsWith("_detected") || ["disease_detected", "lesion_detected"].includes(result.status));
 
   return (
     <div className="page">
