@@ -24,6 +24,15 @@ from flask_cors import CORS
 from ultralytics import YOLO
 from dotenv import load_dotenv
 
+# ── Fix for PyTorch 2.6+ security changes ──────────────────────────────────────
+import torch
+try:
+    from ultralytics.nn.tasks import DetectionModel
+    if hasattr(torch.serialization, 'add_safe_globals'):
+        torch.serialization.add_safe_globals([DetectionModel])
+except (ImportError, AttributeError):
+    pass
+
 # ── Load environment variables ────────────────────────────────────────────────
 load_dotenv()
 
