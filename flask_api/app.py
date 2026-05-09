@@ -49,7 +49,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(ANNOTATED_DIR, exist_ok=True)
 
 # ── Model configuration ───────────────────────────────────────────────────────
-MODEL_PATH           = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(BASE_DIR), "best.pt"))
+# In Docker/HuggingFace, best.pt is in BASE_DIR. Locally, it might be in the parent folder.
+default_model_path = os.path.join(BASE_DIR, "best.pt")
+if not os.path.exists(default_model_path):
+    default_model_path = os.path.join(os.path.dirname(BASE_DIR), "best.pt")
+
+MODEL_PATH           = os.getenv("MODEL_PATH", default_model_path)
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", 0.25))
 
 # ── Load YOLOv8 model (once at startup) ───────────────────────────────────────
@@ -260,7 +265,8 @@ def serve_annotated(filename):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    port  = int(os.getenv("FLASK_PORT", 5001))
-    debug = os.getenv("FLASK_DEBUG", "True").lower() == "true"
-    logger.info(f"🚀 Flask AI API starting on http://localhost:{port}")
+    # Render uses the 'PORT' environment variable
+    port = int(os.getenv("PORT", os.getenv("FLASK_PORT", 5001)))
+    debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    logger.info(f"🚀 Flask AI API starting on 0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=debug)
