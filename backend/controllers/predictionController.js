@@ -7,6 +7,7 @@ const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 const Prediction = require("../models/Prediction");
 
 // ─── @POST /api/predictions/predict ──────────────────────────────────────────
@@ -212,7 +213,7 @@ const deletePrediction = async (req, res) => {
 // ─── @GET /api/predictions/stats ─────────────────────────────────────────────
 const getStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = new mongoose.Types.ObjectId(req.user._id);
 
     const [total, detected, noDisease] = await Promise.all([
       Prediction.countDocuments({ userId }),
@@ -222,7 +223,12 @@ const getStats = async (req, res) => {
 
     // Average confidence over detected lesions
     const avgResult = await Prediction.aggregate([
-      { $match: { userId: userId, status: { $nin: ["no_lesion", "no_disease", "error"] } } },
+      { 
+        $match: { 
+          userId: userId, 
+          status: { $nin: ["no_lesion", "no_disease", "error"] } 
+        } 
+      },
       { $group: { _id: null, avgConf: { $avg: "$topConfidence" } } },
     ]);
     const avgConfidence =
