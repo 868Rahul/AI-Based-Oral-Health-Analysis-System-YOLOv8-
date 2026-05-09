@@ -1,0 +1,39 @@
+# ── Node.js backend ──────────────────────────────────────
+backend/node_modules/
+backend/uploads/
+backend/.env
+
+# ── Flask AI API ─────────────────────────────────────────
+flask_api/__pycache__/
+flask_api/*.pyc
+flask_api/uploads/
+flask_api/annotated/
+flask_api/.env
+flask_api/venv/
+flask_api/env/
+
+# ── React frontend ────────────────────────────────────────
+frontend/node_modules/
+frontend/build/
+frontend/.env
+
+# ── General ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.idea/
+.vscode/settings.json
+
+# ── YOLOv8 Artifacts & Models ─────────────────────────────
+training_results/
+args.yaml
+runs/
+.ipynb_checkpoints/
+*.csv
+*.png
+*.jpg
+!frontend/public/*.png
+!frontend/public/*.jpg
+!frontend/public/*.svg
+oral_dataset/
