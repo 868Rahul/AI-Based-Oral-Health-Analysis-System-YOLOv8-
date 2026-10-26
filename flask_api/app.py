@@ -65,6 +65,15 @@ if not os.path.exists(default_model_path):
 
 MODEL_PATH           = os.getenv("MODEL_PATH", default_model_path)
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", 0.25))
+# Cancer is detected with systematically lower confidence (F1 peaks near 0.10), so a global 0.25
+# cut-off hides almost every cancer finding. Per-class overrides; everything else uses the default.
+CLASS_CONFIDENCE = {
+    "cancer": float(os.getenv("CANCER_CONFIDENCE_THRESHOLD", 0.10)),
+}
+
+
+def threshold_for(label: str) -> float:
+    return CLASS_CONFIDENCE.get(label.strip().lower(), CONFIDENCE_THRESHOLD)
 
 # ── Load YOLOv8 model (once at startup) ───────────────────────────────────────
 logger.info(f"Loading YOLOv8 model from: {MODEL_PATH}")
@@ -78,14 +87,39 @@ except Exception as e:
 # ── Allowed extensions ────────────────────────────────────────────────────────
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
-# ── Color mapping (BGR for OpenCV) ──────────────────────────────────────────
-COLOR_MAP = {
-    "calculus":   (0, 165, 255),   # Bright Orange
-    "cancer":     (0, 0, 255),     # Deep Red
-    "caries":     (0, 255, 255),   # Bright Yellow
-    "gingivitis": (255, 0, 255),   # Vibrant Magenta
-    "ulcer":      (255, 191, 0),   # Deep Sky Blue (Cyan-ish but distinct)
+# ── Color mapping ─────────────────────────────────────────────────────────────
+# Single source of truth (hex RGB). The same values are sent to the frontend with
+# every detection and mirrored in frontend/src/constants/diseases.js.
+COLOR_HEX = {
+    "calculus":   "#FFA500",   # Orange
+    "cancer":     "#FF0000",   # Red
+    "caries":     "#FFFF00",   # Yellow
+    "gingivitis": "#FF00FF",   # Magenta
+    "ulcer":      "#00BFFF",   # Sky Blue
 }
+DEFAULT_HEX = "#00C8C8"
+
+
+def hex_to_bgr(h: str):
+    h = h.lstrip("#")
+    return (int(h[4:6], 16), int(h[2:4], 16), int(h[0:2], 16))
+
+
+def color_hex_for(label: str) -> str:
+    """Normalise labels such as 'Calculus ', 'dental_caries' or 'class_2' to a colour."""
+    key = label.strip().lower()
+    if key in COLOR_HEX:
+        return COLOR_HEX[key]
+    for name, hx in COLOR_HEX.items():
+        if name in key:
+            return hx
+    return DEFAULT_HEX
+
+
+def text_color_for(bgr):
+    """Black text on light fills (yellow/orange), white otherwise, for legibility."""
+    b, g, r = bgr
+    return (0, 0, 0) if (0.299 * r + 0.587 * g + 0.114 * b) > 150 else (255, 255, 255)
 
 def allowed_file(filename: str) -> bool:
     return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
@@ -103,6 +137,13 @@ def health():
         "model_loaded": model is not None,
         "model_path": MODEL_PATH,
     })
+
+
+@app.route("/classes", methods=["GET"])
+def classes():
+    """Class names and the colour used for each one (for UI legends)."""
+    names = list(model.names.values()) if model is not None else list(COLOR_HEX)
+    return jsonify([{"label": n, "color": color_hex_for(n)} for n in names])
 
 
 @app.route("/predict", methods=["POST"])
@@ -146,7 +187,7 @@ def predict():
     try:
         results = model.predict(
             source=str(original_path),
-            conf=CONFIDENCE_THRESHOLD,
+            conf=min([CONFIDENCE_THRESHOLD, *CLASS_CONFIDENCE.values()]),
             save=False,        # We'll draw boxes manually for full control
             verbose=False,
         )
@@ -163,10 +204,13 @@ def predict():
             conf  = float(box.conf[0])
             cls   = int(box.cls[0])
             label = model.names.get(cls, f"class_{cls}")
+            if conf < threshold_for(label):
+                continue
             x1, y1, x2, y2 = map(float, box.xyxy[0])
 
             detections.append({
                 "label":      label,
+                "color":      color_hex_for(label),
                 "confidence": round(conf, 4),
                 "bbox": {
                     "x1": round(x1, 2),
@@ -191,8 +235,7 @@ def predict():
             conf   = det["confidence"]
             label  = det["label"].strip()
 
-            # Use color from map or default to a teal
-            color = COLOR_MAP.get(label.lower(), (200, 200, 0))
+            color = hex_to_bgr(det["color"])
 
             cv2.rectangle(img_cv, (x1, y1), (x2, y2), color, 3)
 
@@ -209,7 +252,7 @@ def predict():
                 img_cv, text,
                 (x1 + 5, y1 - 5),
                 font, font_scale,
-                (255, 255, 255),
+                text_color_for(color),
                 thickness,
                 cv2.LINE_AA,
             )
@@ -245,7 +288,7 @@ def predict():
         )
     else:
         status = "no_disease"
-        message = "No oral diseases or abnormalities detected."
+        message = "No findings above the confidence threshold. This tool is a screening aid, not a medical diagnosis."
 
     return jsonify({
         "status":          status,

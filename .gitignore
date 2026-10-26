@@ -41,3 +41,8 @@ runs/
 !frontend/public/*.jpg
 !frontend/public/*.svg
 oral_dataset/
+oral_dataset_balanced/
+oral_dataset_balanced.zip
+Action.md
+Oral_Health_AI_Project_Documentation.Docx
+

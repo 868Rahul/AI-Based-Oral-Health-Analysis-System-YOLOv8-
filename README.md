@@ -39,8 +39,17 @@ ORAL/
 
 The system detects 5 specific oral conditions. Each is highlighted with a unique color in the AI-annotated results:
 
-| Condition | Class ID | Color (BGR) | Visual |
-| :--- | :--- | :--- | :--- |
+| Condition | Class ID | Hex | BGR (OpenCV) | Visual |
+| :--- | :--- | :--- | :--- | :--- |
+| **Calculus** | 0 | `#FFA500` | `(0, 165, 255)` | 🟠 Orange |
+| **Cancer** | 1 | `#FF0000` | `(0, 0, 255)` | 🔴 Red |
+| **Caries** | 2 | `#FFFF00` | `(0, 255, 255)` | 🟡 Yellow |
+| **Gingivitis** | 3 | `#FF00FF` | `(255, 0, 255)` | 🟣 Magenta |
+| **Ulcer** | 4 | `#00BFFF` | `(255, 191, 0)` | 🔵 Sky Blue |
+
+Single source of truth: `COLOR_HEX` in `flask_api/app.py`, mirrored in `frontend/src/constants/diseases.js`. See `Action.md` for the dataset rebuild.
+
+--- | :--- | :--- | :--- |
 | **Cancer** | 1 | `(0, 0, 255)` | 🔴 Red |
 | **Calculus** | 0 | `(0, 165, 255)` | 🟠 Orange |
 | **Caries** | 2 | `(0, 255, 255)` | 🟡 Yellow |

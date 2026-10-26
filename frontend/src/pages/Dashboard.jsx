@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { DiseaseLegend } from "../components/DiseaseTag";
+import { getDisease, withAlpha } from "../constants/diseases";
 
 // ── Small stat card ──────────────────────────────────────────────────────────
 const StatCard = ({ icon, bg, label, value, sub }) => (
@@ -118,6 +120,12 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {/* Colour key */}
+        <div className="card animate-fade-in" style={{ marginBottom: "2rem" }}>
+          <div className="legend-caption">Detectable conditions &amp; box colours</div>
+          <DiseaseLegend />
+        </div>
+
         {/* Recent predictions table */}
         <div className="card animate-fade-in">
           <div className="flex-between" style={{ marginBottom: "1.1rem" }}>
@@ -148,9 +156,17 @@ export default function Dashboard() {
                         {new Date(p.createdAt).toLocaleString()}
                       </td>
                       <td>
-                        <span className={`badge ${(p.status === "no_lesion" || p.status === "no_disease") ? "badge-success" : (p.status === "error" ? "badge-warning" : "badge-danger")}`}>
-                          {p.status ? p.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "Error"}
-                        </span>
+                        {(() => {
+                          const label = p.status ? p.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "Error";
+                          if (!p.status || p.status === "error") return <span className="badge badge-warning">{label}</span>;
+                          if (p.status === "no_lesion" || p.status === "no_disease") return <span className="badge badge-success">{label}</span>;
+                          const d = getDisease(p.status.replace(/_detected$/, "").replace(/_/g, " "));
+                          return (
+                            <span className="disease-tag" style={{ color: d.color, background: withAlpha(d.color, 0.14), borderColor: withAlpha(d.color, 0.55) }}>
+                              <span className="disease-dot" style={{ background: d.color }} />{label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td style={{ fontWeight: 600 }}>{p.lesionCount}</td>
                       <td>

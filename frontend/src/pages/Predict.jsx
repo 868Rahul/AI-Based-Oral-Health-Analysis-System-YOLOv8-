@@ -8,6 +8,8 @@ import { useDropzone } from "react-dropzone";
 import api from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import toast from "react-hot-toast";
+import { DiseaseTag, DiseaseLegend } from "../components/DiseaseTag";
+import { getDisease, withAlpha } from "../constants/diseases";
 
 export default function Predict() {
   const [file,    setFile]    = useState(null);
@@ -76,6 +78,15 @@ export default function Predict() {
 
   const handleReset = () => { setFile(null); setPreview(null); setResult(null); };
 
+  // Per-class summary, sorted by highest confidence
+  const summary = Object.values((result?.detections || []).reduce((acc, d) => {
+    const k = getDisease(d.label).key;
+    acc[k] = acc[k] || { label: d.label, count: 0, best: 0 };
+    acc[k].count += 1;
+    acc[k].best = Math.max(acc[k].best, d.confidence);
+    return acc;
+  }, {})).sort((a, b) => b.best - a.best);
+
   const isDetected = result?.status && (result.status.endsWith("_detected") || ["disease_detected", "lesion_detected"].includes(result.status));
 
   return (
@@ -91,6 +102,9 @@ export default function Predict() {
         {/* Upload area */}
         {!result && (
           <div className="card animate-slide-up" style={{ marginBottom: "1.5rem" }}>
+            <div className="legend-caption">The AI looks for these 5 conditions</div>
+            <DiseaseLegend />
+            <div style={{ height: "1.1rem" }} />
             <div {...getRootProps()} className={`dropzone ${isDragActive ? "active" : ""}`}>
               <input {...getInputProps()} id="image-upload-input" />
               <div className="dropzone-icon">{file ? "🖼️" : "📂"}</div>
@@ -160,6 +174,27 @@ export default function Predict() {
                   </div>
                 )}
 
+                {/* Per-class summary cards */}
+                {isDetected && summary.length > 0 && (
+                  <div className="summary-grid">
+                    {summary.map((s) => {
+                      const d = getDisease(s.label);
+                      return (
+                        <div key={d.key} className="summary-card"
+                          style={{ borderColor: withAlpha(d.color, 0.6), background: withAlpha(d.color, 0.08) }}>
+                          <span className="disease-dot" style={{ background: d.color }} />
+                          <div>
+                            <div style={{ fontWeight: 700, color: d.color }}>{d.name}</div>
+                            <div className="text-xs text-muted">
+                              {s.count} finding{s.count > 1 ? "s" : ""} · best {(s.best * 100).toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Image comparison */}
                 <div className="img-compare">
                   <div className="img-compare-item">
@@ -185,31 +220,42 @@ export default function Predict() {
                   </div>
                 </div>
 
+                {isDetected && (
+                  <div style={{ marginTop: "1rem" }}>
+                    <div className="legend-caption">Box colour key</div>
+                    <DiseaseLegend active={(result.detections || []).map((d) => d.label)} />
+                  </div>
+                )}
+
                 {/* Per-detection rows */}
                 {isDetected && result.detections?.length > 0 && (
                   <div style={{ marginTop: "1.25rem" }}>
                     <h3 style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.75rem", color: "var(--clr-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       Detection Details
                     </h3>
-                    {result.detections.map((det, i) => (
-                      <div key={i} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "0.65rem 1rem", marginBottom: "0.5rem",
-                        background: "var(--clr-bg-elevated)", borderRadius: "var(--radius-md)",
-                        border: "1px solid var(--clr-border)",
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                          <span style={{
-                            width: 22, height: 22, borderRadius: "50%",
-                            background: "var(--clr-danger)", display: "inline-flex",
-                            alignItems: "center", justifyContent: "center",
-                            fontSize: "0.65rem", color: "#fff", fontWeight: 700,
-                          }}>{i + 1}</span>
-                          <span style={{ fontWeight: 600 }}>{det.label}</span>
+                    {result.detections.map((det, i) => {
+                      const d = getDisease(det.label);
+                      return (
+                        <div key={i} style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "0.65rem 1rem", marginBottom: "0.5rem",
+                          background: "var(--clr-bg-elevated)", borderRadius: "var(--radius-md)",
+                          border: "1px solid var(--clr-border)", borderLeft: `5px solid ${d.color}`,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                            <span style={{
+                              width: 22, height: 22, borderRadius: "50%",
+                              background: d.color, display: "inline-flex",
+                              alignItems: "center", justifyContent: "center",
+                              fontSize: "0.65rem", color: "#000", fontWeight: 700,
+                            }}>{i + 1}</span>
+                            <span style={{ fontWeight: 600, color: d.color }}>{d.name}</span>
+                            <span className="text-xs text-muted">{d.note}</span>
+                          </div>
+                          <DiseaseTag label={det.label} confidence={det.confidence} />
                         </div>
-                        <span className="badge badge-danger">{(det.confidence * 100).toFixed(1)}%</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

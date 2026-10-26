@@ -7,6 +7,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import toast from "react-hot-toast";
+import { DiseaseTag } from "../components/DiseaseTag";
+import { getDisease, withAlpha } from "../constants/diseases";
 
 export default function History() {
   const [predictions, setPredictions] = useState([]);
@@ -66,9 +68,14 @@ export default function History() {
     if (!status) return <span className="badge badge-warning">❌ Error</span>;
     if (status === "no_lesion" || status === "no_disease") return <span className="badge badge-success">✅ Clear</span>;
     
-    // Format dynamic status (e.g., "ulcer_detected" -> "Ulcer Detected")
+    // "ulcer_detected" -> chip in that disease's colour
+    const d = getDisease(status.replace(/_detected$/, "").replace(/_/g, " "));
     const label = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-    return <span className="badge badge-danger">⚠️ {label}</span>;
+    return (
+      <span className="disease-tag" style={{ color: d.color, background: withAlpha(d.color, 0.14), borderColor: withAlpha(d.color, 0.55) }}>
+        <span className="disease-dot" style={{ background: d.color }} />{label}
+      </span>
+    );
   };
 
   return (
@@ -186,9 +193,7 @@ export default function History() {
                                   </p>
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                                     {p.detections.map((d, i) => (
-                                      <span key={i} className="badge badge-danger">
-                                        {d.label} — {(d.confidence * 100).toFixed(1)}%
-                                      </span>
+                                      <DiseaseTag key={i} label={d.label} confidence={d.confidence} />
                                     ))}
                                   </div>
                                 </div>
