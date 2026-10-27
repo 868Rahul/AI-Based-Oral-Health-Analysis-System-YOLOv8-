@@ -1,7 +1,8 @@
 flask==3.0.0
-ultralytics==8.0.227
+ultralytics>=8.3.0
 Pillow==10.1.0
 opencv-python-headless==4.8.1.78
 python-dotenv==1.0.0
 flask-cors==4.0.0
 numpy==1.26.2
+transformers>=4.40,<5

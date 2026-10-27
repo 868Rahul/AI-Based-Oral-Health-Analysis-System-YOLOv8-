@@ -80,6 +80,16 @@ const predict = async (req, res) => {
       },
     });
   } catch (error) {
+    // Flask rejected the image (not a mouth photo / unreadable file): tell the user, don't log as an error
+    const flaskCode = error.response?.data?.code;
+    if (["not_oral_image", "invalid_image"].includes(flaskCode)) {
+      return res.status(error.response.status).json({
+        success: false,
+        code: flaskCode,
+        message: error.response.data.message,
+      });
+    }
+
     console.error("Prediction error:", error.message);
 
     // Save failed prediction to DB for audit trail

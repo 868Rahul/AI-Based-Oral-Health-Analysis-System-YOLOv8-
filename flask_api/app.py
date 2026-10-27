@@ -84,6 +84,8 @@ except Exception as e:
     logger.error(f"❌ Failed to load model: {e}")
     model = None
 
+from oral_gate import is_oral_image, GATE_THRESHOLD
+
 # ── Allowed extensions ────────────────────────────────────────────────────────
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -182,6 +184,36 @@ def predict():
         logger.info(f"✅ Successfully saved upload to: {original_path}")
     else:
         logger.error(f"❌ Failed to save upload to: {original_path}")
+
+    # ── Guard: file must be a readable image (corrupt / renamed files) ───────
+    try:
+        with Image.open(original_path) as im:
+            im.verify()
+    except Exception:
+        try:
+            os.remove(original_path)
+        except OSError:
+            pass
+        return jsonify({
+            "error":   "invalid_image",
+            "code":    "invalid_image",
+            "message": "That file could not be read as an image. Please upload a valid JPG, PNG or WEBP photo.",
+        }), 400
+
+    # ── Gate: reject images that are clearly not an oral photo ───────────────
+    accepted, oral_score = is_oral_image(original_path)
+    logger.info(f"Oral gate score={oral_score:.3f} (threshold {GATE_THRESHOLD}) accepted={accepted}")
+    if not accepted:
+        try:
+            os.remove(original_path)
+        except OSError:
+            pass
+        return jsonify({
+            "error":   "not_oral_image",
+            "code":    "not_oral_image",
+            "message": "This doesn't look like an oral photo. Please upload a clear, well-lit "
+                       "close-up of the mouth, teeth, gums, tongue or lips.",
+        }), 422
 
     # ── Run YOLOv8 inference ──────────────────────────────────────────────────
     try:

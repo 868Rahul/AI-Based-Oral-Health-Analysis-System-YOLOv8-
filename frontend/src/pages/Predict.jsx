@@ -52,7 +52,11 @@ export default function Predict() {
         ? `⚠️ ${data.prediction.detectionCount || data.prediction.lesionCount} issue(s) detected!`
         : "✅ No issues detected.");
     } catch (err) {
-      toast.error(err.uiMessage || "Prediction failed. Is the AI server running?");
+      if (err.response?.data?.code === "not_oral_image") {
+        toast(err.uiMessage, { icon: "🦷", duration: 6000 });
+      } else {
+        toast.error(err.uiMessage || "Prediction failed. Is the AI server running?");
+      }
     } finally {
       setLoading(false);
     }
